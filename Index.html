@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelly's Palm Beach Fishing Guy</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #eef2f3; margin: 0; padding: 10px; color: #232f3e; }
+        .container { display: grid; grid-template-columns: 1.2fr 2fr 1.3fr; gap: 12px; max-width: 1350px; margin: 0 auto; }
+        @media (max-width: 1100px) { .container { grid-template-columns: 1fr; } }
+        
+        .card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #cfd9df; margin-bottom: 12px; }
+        h3 { margin-top: 0; color: #005a9c; border-bottom: 2px solid #e1e8ed; padding-bottom: 6px; font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .tide-val { font-size: 2.8em; font-weight: 800; text-align: center; color: #1a202c; }
+        .status-pill { font-size: 0.65em; font-weight: bold; padding: 5px; border-radius: 4px; display: block; text-transform: uppercase; text-align: center; }
+        .go { background: #dcfce7; color: #166534; }
+        .caution { background: #fef9c3; color: #854d0e; }
+        .stop { background: #fee2e2; color: #991b1b; }
+
+        .day-container { margin-bottom: 12px; background: #fff; border-radius: 10px; padding: 10px; border: 1px solid #e2e8f0; }
+        .day-label { font-weight: bold; color: #1e293b; font-size: 0.9em; margin-bottom: 8px; display: block; border-left: 4px solid #005a9c; padding-left: 8px; }
+        .timeline-v1 { display: flex; justify-content: space-between; gap: 5px; }
+        .slot { flex: 1; text-align: center; background: #f8fafc; padding: 8px 3px; border-radius: 6px; font-size: 0.7em; border: 1px solid #cbd5e1; }
+        .slot-icon { font-size: 1.4em; display: block; margin: 4px 0; }
+        
+        .hourly-wind { font-size: 0.8em; max-height: 180px; overflow-y: auto; margin-top: 10px; }
+        .wind-line { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+
+        .emergency-btn { display: block; background: #005a9c; color: white; text-align: center; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; margin-top: 10px; font-size: 0.85em; box-shadow: 0 4px 0 #003d6b; }
+        .temp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+        .temp-box { background: #f1f5f9; padding: 8px; border-radius: 8px; text-align: center; }
+        .temp-val { font-size: 1.1em; font-weight: bold; }
+        
+        .fish-box { background: #f0f7ff; border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #005a9c; font-size: 0.8em; }
+        .bait-tag { display: inline-block; background: #e0f2fe; color: #0369a1; font-size: 0.7em; padding: 2px 6px; border-radius: 4px; margin: 2px; border: 1px solid #bae6fd; font-weight: bold; }
+        .updated { font-size: 0.65em; opacity: 0.5; text-align: center; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center; color: #1e293b; margin: 10px 0 5px 0; font-size: 1.4em;">Kelly's Palm Beach Fishing Guy</h1>
+    <div id="update-time" class="updated">Fetching Atlantic Conditions...</div>
+
+    <div class="container">
+        <div class="column">
+            <div class="card">
+                <h3>🎣 March Hot List</h3>
+                <div id="fishing-report"></div>
+                <a href="https://tides4fishing.com/us/florida/lake-worth-inlet" target="_blank" style="display:block; text-align:center; background:#005a9c; color:white; text-decoration:none; padding:8px; border-radius:8px; font-size:0.8em; font-weight:bold; margin-top:10px;">🌊 Solunar Tables</a>
+            </div>
+            <div class="card" style="background: #fdf2f2; border-color: #fecaca;">
+                <h3>⚓ Inlet Safety</h3>
+                <div style="font-size: 0.75em; line-height: 1.6;">
+                    📍 <strong>Lake Worth Inlet</strong><br>
+                    ⚠️ Caution: Outgoing tide vs East wind creates standing waves.<br>
+                    🌊 Current Surf: 3-4 ft NE<br>
+                    🏥 Coast Guard: Channel 16
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card">
+                <div style="font-size: 0.65em; font-weight: bold; opacity: 0.6; text-align: center;">CURRENT TIDE HEIGHT</div>
+                <div id="tide-level" class="tide-val">...</div>
+                <div id="tide-status" class="status-pill" style="max-width: 140px; margin: 0 auto; padding: 6px;">Syncing...</div>
+            </div>
+
+            <div class="card">
+                <h3>🚤 3-Day Offshore Outlook</h3>
+                <div id="offshore-forecast"></div>
+            </div>
+
+            <div class="card">
+                <h3>📈 24-Hr Tide Cycle</h3>
+                <canvas id="tideChart" style="height: 160px;"></canvas>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card" style="text-align: center;">
+                <h3>💨 Wind & Sea</h3>
+                <div class="temp-grid">
+                    <div class="temp-box"><span style="font-size:0.6em;display:block;opacity:0.6;">AIR</span><span id="air-temp" class="temp-val">--°</span></div>
+                    <div class="temp-box"><span style="font-size:0.6em;display:block;opacity:0.6;">WATER</span><span id="water-temp" class="temp-val">77°</span></div>
+                </div>
+                <div id="wind-speed" style="font-size: 1.8em; font-weight: 800;">-- kts</div>
+                <div id="wind-dir" style="font-size: 0.75em; margin-bottom: 8px;">--</div>
+                <div id="sea-safety" class="status-pill">--</div>
+                
+                <h4 style="font-size: 0.7em; margin: 15px 0 5px 0; color: #005a9c; text-align: left;">24-HR WIND TREND</h4>
+                <div id="hourly-list" class="hourly-wind"></div>
+            </div>
+            
+            <div class="card" style="background: #1e293b; color: white; border: none;">
+                <h3>Kelly's Log</h3>
+                <div style="font-size: 0.75em; line-height: 1.8;">
+                    🌅 Sunrise: 7:14 AM<br>
+                    📍 Favorite: The Breakers Reef<br>
+                    🐋 Migration: Spinner Sharks Active<br>
+                    📱 Emergency: 214-364-0262
+                </div>
+                <a id="float-plan" href="#" class="emergency-btn">📲 SEND FLOAT PLAN</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WIND_LIMIT = 15; // Knots for offshore
+        const MY_PHONE = "214-364-0262";
+
+        async function init() {
+            updateFishing();
+            await getTideData();
+            await getWeatherData();
+            await renderTideChart();
+        }
+
+        async function getTideData() {
+            try {
+                const res = await fetch('https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?date=latest&station=8722670&product=water_level&datum=mllw&time_zone=lst_ldt&units=english&format=json');
+                const data = await res.json();
+                const level = parseFloat(data.data[0].v);
+                document.getElementById('tide-level').innerText = level.toFixed(2) + ' ft';
+                document.getElementById('update-time').innerText = "Updated: " + new Date().toLocaleTimeString();
+                
+                const ts = document.getElementById('tide-status');
+                ts.innerText = "LAKE WORTH PIER DATA";
+                ts.className = "status-pill go";
+            } catch(e) { document.getElementById('tide-level').innerText = "77°F"; }
+        }
+
+        async function getWeatherData() {
+            try {
+                const hRes = await fetch('https://api.weather.gov/gridpoints/MFL/111,99/forecast/hourly');
+                const hData = await hRes.json();
+                const periods = hData.properties.periods;
+                
+                const now = periods[0];
+                document.getElementById('air-temp').innerText = now.temperature + "°";
+                document.getElementById('wind-speed').innerText = now.windSpeed;
+                document.getElementById('wind-dir').innerText = "From the " + now.windDirection;
+                
+                const curW = parseInt(now.windSpeed.match(/\d+/)) || 0;
+                const ss = document.getElementById('sea-safety');
+                ss.innerText = curW >= WIND_LIMIT ? "ROUGH SEAS - CAUTION" : "LIGHT CHOP - GO";
+                ss.className = "status-pill " + (curW >= WIND_LIMIT ? "stop" : "go");
+
+                let hHtml = "";
+                for(let i=1; i<=24; i++){
+                    const p = periods[i];
+                    const wVal = parseInt(p.windSpeed.match(/\d+/)) || 0;
+                    const style = wVal >= WIND_LIMIT ? 'color:#e53e3e;font-weight:bold;' : '';
+                    hHtml += `<div class="wind-line"><span>${new Date(p.startTime).toLocaleTimeString([], {hour:'numeric'})}</span><span style="${style}">${p.windSpeed}</span></div>`;
+                }
+                document.getElementById('hourly-list').innerHTML = hHtml;
+
+                const dRes = await fetch('https://api.weather.gov/gridpoints/MFL/111,99/forecast');
+                const dData = await dRes.json();
+                const container = document.getElementById('offshore-forecast');
+                for(let day=0; day<3; day++) {
+                    const am = dData.properties.periods[day*2];
+                    const pm = dData.properties.periods[day*2+1];
+                    const getSlot = (name, p) => {
+                        const wStr = p ? p.windSpeed : "8 mph"; 
+                        const wN = parseInt(wStr.match(/\d+/)) || 0;
+                        const ico = wN >= WIND_LIMIT ? "🌊" : "🚤";
+                        return `<div class="slot"><span class="slot-name">${name}</span><span class="slot-icon">${ico}</span><b>${wStr}</b></div>`;
+                    };
+                    container.innerHTML += `<div class="day-container"><span class="day-label">${am.name.split(' ')[0]}</span><div class="timeline-v1">${getSlot("AM", am)}${getSlot("PM", pm)}${getSlot("EVE", null)}</div></div>`;
+                }
+
+                const smsMsg = `Palm Beach Fishing: Offshore. Air: ${now.temperature}F. Wind: ${now.windSpeed}. Leaving Lake Worth Inlet now.`;
+                document.getElementById('float-plan').href = `sms:${MY_PHONE}?body=${encodeURIComponent(smsMsg)}`;
+
+            } catch(e) {}
+        }
+
+        function updateFishing() {
+            const reports = [
+                { n: "Sailfish", p: "Red hot bite in 150-250' depths. Tailing down waves.", b: ["Live Goggle Eyes", "Kites"] },
+                { n: "Mahi Mahi", p: "Showing up as water warms (77°F). Look for weedlines.", b: ["Ballyhoo", "Spoons"] },
+                { n: "Snook", p: "Excellent inshore action around Palm Beach Inlet and bridges.", b: ["Live Sardines", "Flare Jigs"] },
+                { n: "Blackfin Tuna", p: "Feeding around bait schools on the 120' ledge.", b: ["Chumming", "Plugs"] }
+            ];
+            document.getElementById('fishing-report').innerHTML = reports.map(f => `<div class="fish-box"><strong>${f.n}</strong><br>${f.p}<br>${f.b.map(bt => `<span class="bait-tag">${bt}</span>`).join('')}</div>`).join('');
+        }
+
+        async function renderTideChart() {
+            const ctx = document.getElementById('tideChart');
+            new Chart(ctx, { type: 'line', data: { labels: ['6AM','9AM','12PM','3PM','6PM','9PM','12AM'], datasets: [{ label: 'Tide Height', data: [0.1, 2.6, -0.4, 3.1, 0.2, 2.5, -0.2], borderColor: '#005a9c', backgroundColor: '#005a9c11', fill: true, tension: 0.4 }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { font: { size: 9 } } } } } });
+        }
+        init();
+    </script>
+</body>
+</html>
